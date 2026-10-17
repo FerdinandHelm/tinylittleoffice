@@ -64,8 +64,8 @@ import {
 } from './model.ts';
 import COMMANDS, { CARD, alignIcon } from './commands.ts';
 import { lookOf, type LookId } from './look.ts';
+import { fenceLink } from './view.ts';
 import { LOCKED_LANG } from '../../kit/share/locked.ts';
-import { host } from '../../kit/core/host.ts';
 import '../../kit/ui/locked-doc.ts';
 import type { TableCmd, ToWriteTable } from './table.ts';
 import '../../kit/ui/bar.ts';
@@ -450,7 +450,7 @@ export class ToWriteEditor extends DocElement<Doc> {
   private openOf(at: number): ContextEntry[] {
     const b = this.doc.blocks[at];
     if (b?.k !== 'fence' || !b.lang) return [];
-    const link = host.link(b.lang, b.body);
+    const link = fenceLink(b.lang, b.body, `${location.origin}${location.pathname}`);
     return [{ label: t('common-open-in-new-tab'), icon: UI.open, does: () => void window.open(link, '_blank', 'noopener') }];
   }
   moveCard(at: number, by: 1 | -1) {

@@ -33,6 +33,7 @@ import { coarse, drawnIn, runKey } from '../../kit/core/commands.ts';
 import { BOLD, CODE, FOOTNOTE, HIGHLIGHT, INDENT, ITALIC, LINK, OUTDENT, STRIKE, UNDERLINE } from '../../kit/text/text-commands.ts';
 import COMMANDS, { EDIT, SHOW } from './commands.ts';
 import { docToHtml, linkToFence, pasteFrom, plainOf } from '../../kit/text/clipboard.ts';
+import { encodeDoc } from '../../kit/core/codec.ts';
 import { editFence, editTable, makeDoc, newTable } from '../../kit/ui/doc-dialog.ts';
 import { pageSvg } from '../../kit/draw/draw.ts';
 import { DocElement, firstAt, type Entry } from '../../kit/core/element.ts';
@@ -41,8 +42,7 @@ import { t } from '../../kit/core/i18n.ts';
 import { noteMarks, type NoteMark, type ToNotes } from '../../kit/draw/notes.ts';
 import { askDocLink } from '../../kit/ui/insert-dialogs.ts';
 import type { MenuItem, ToMenu } from '../../kit/ui/menu.ts';
-import { LOCKED_LANG, isOpened } from '../../kit/share/locked.ts';
-import { host } from '../../kit/core/host.ts';
+import { LOCKED_LANG, isOpened, placedLink } from '../../kit/share/locked.ts';
 import { OPENED_EVENT, openPlaced } from '../../kit/ui/locked-doc.ts';
 import { Rows, type Clip, type RowItem, type RowRange, type RowSpan } from '../../kit/text/rows.ts';
 import type { Sel } from '../../kit/text/textops.ts';
@@ -592,12 +592,13 @@ export class ToDeckEditor extends DocElement<Slide[]> {
     const s = this.slide;
     const b = s.sub >= 0 ? this.doc.blocks[s.sub] : null;
     if (!b) return [];
+    const here = `${location.origin}${location.pathname}`;
     const remove = { label: t('deck-remove-from-slide'), icon: UI.trash, does: () => this.change(setSub(s, null)) };
     if (b.k === 'fence' && b.lang) {
       const known = !!lookup.appOf(b.lang);
       return [
         ...(known ? [{ label: t('common-edit'), icon: UI.pen, does: () => void this.editSub() }] : []),
-        { label: t('common-open-in-new-tab'), icon: UI.open, does: () => void window.open(host.link(b.lang, b.body), '_blank', 'noopener') },
+        { label: t('common-open-in-new-tab'), icon: UI.open, does: () => void window.open(placedLink(b.lang, b.body, encodeDoc, here), '_blank', 'noopener') },
         remove,
       ];
     }

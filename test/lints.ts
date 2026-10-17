@@ -411,18 +411,16 @@ export function cyclesOf(graph: Map<string, string[]>): string[][] {
 /* ---------- The kernel holds no DOM ---------- */
 
 export const DOM_NAMES = new Set(['window', 'document', 'navigator', 'localStorage']);
-/** The page's address and its history: the host's to read (kit/core/host.ts), never an app's. */
-export const ADDRESS_NAMES = new Set(['location', 'history']);
 
-/** The lines of a source that name the browser's globals (not as a property, `x.document`, or as a key, `{ document: … }`): `names`, the kernel's by default. */
-export function domNames(source: string, names: Set<string> = DOM_NAMES): Bare[] {
+/** The lines of a source that name the browser's globals (not as a property, `x.document`, or as a key, `{ document: … }`). */
+export function domNames(source: string): Bare[] {
   const lineOf = liner(source);
   const toks = tokensOf(source);
   return toks
     .filter(
       (t, i) =>
         t.k === K.Identifier &&
-        names.has(t.text) &&
+        DOM_NAMES.has(t.text) &&
         toks[i - 1]?.k !== K.DotToken &&
         toks[i - 1]?.k !== K.QuestionDotToken &&
         !(toks[i + 1]?.k === K.ColonToken && (toks[i - 1]?.k === K.OpenBraceToken || toks[i - 1]?.k === K.CommaToken)),
