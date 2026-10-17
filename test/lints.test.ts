@@ -10,7 +10,7 @@ import { describe, expect, test } from 'vitest';
 import { fetchedAtOnce, lazyImports, measure, overBudget, readBudgets, shapeOf, type Sizes } from '../scripts/budgets.ts';
 import { deadExports } from '../scripts/dead.ts';
 import { staleFiles } from '../scripts/generated.ts';
-import { ALLOWED, KIT_FOLDERS, NOT_WORDS, WAIT_MS, bareWords, domNames, graphProblems, kitProblems, timedWaits, type Module } from './lints.ts';
+import { ADDRESS_NAMES, ALLOWED, KIT_FOLDERS, NOT_WORDS, WAIT_MS, bareWords, domNames, graphProblems, kitProblems, timedWaits, type Module } from './lints.ts';
 
 const ROOT = join(import.meta.dirname, '..');
 const FIXTURES = join(import.meta.dirname, 'fixtures/lints');
@@ -109,6 +109,18 @@ describe('no DOM in the model: the kernel (src/doc) never names window, document
     expect(found(modules(join(FIXTURES, 'graph')))).toStrictEqual(['src/doc/model.ts:3: window']);
   });
   test('src/doc names none', () => {
+    expect(found(tree)).toStrictEqual([]);
+  });
+});
+
+describe('the address is the host’s: an app never names location or history (kit/core/host.ts, docs/library.md)', () => {
+  const found = (mods: Module[]) =>
+    mods.filter((m) => m.path.startsWith('src/apps/') && !m.path.includes('/tests/')).flatMap((m) => domNames(m.source, ADDRESS_NAMES).map((d) => `${m.path}:${d.line}: ${d.words}`));
+  test('the fixture’s are found, and a property or a key is not', () => {
+    const source = 'const a = location.href;\nhistory.back();\nconst b = x.location;\nconst c = { location: 1 };\n';
+    expect(found([{ path: 'src/apps/x/editor.ts', source }])).toStrictEqual(['src/apps/x/editor.ts:1: location', 'src/apps/x/editor.ts:2: history']);
+  });
+  test('src/apps names neither', () => {
     expect(found(tree)).toStrictEqual([]);
   });
 });

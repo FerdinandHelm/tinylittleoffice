@@ -31,8 +31,8 @@ import { appOf } from '../../kit/core/apps.ts';
 import { clipText, docToHtml, GENERATOR, htmlToBlocks, plainOf } from '../../kit/text/clipboard.ts';
 import type { ContextEntry } from '../../kit/ui/context.ts';
 import { lastCopied, Rows, type Clip, type RowItem, type RowRange, type RowSpan } from '../../kit/text/rows.ts';
-import { decodeDoc, encodeDoc, isSealed } from '../../kit/core/codec.ts';
-import { LOCKED_LANG, lockedFence, placedLink } from '../../kit/share/locked.ts';
+import { host } from '../../kit/core/host.ts';
+import { LOCKED_LANG } from '../../kit/share/locked.ts';
 import type { ToDialog } from '../../kit/ui/dialog.ts';
 import { highlights, rangesIn, type Found } from '../../kit/ui/find.ts';
 import { fold } from '../../kit/share/search.ts';
@@ -46,7 +46,6 @@ import { dateWords } from '../../kit/core/dates.ts';
 import { noteMarks, type NoteMark, type ToNotes } from '../../kit/draw/notes.ts';
 import { askDocLink } from '../../kit/ui/insert-dialogs.ts';
 import type { MenuItem, ToMenu } from '../../kit/ui/menu.ts';
-import { parseHash, routeHash } from '../../kit/core/route.ts';
 import type { NoteAt, Sel, TextOps, ToText } from '../../kit/text/text.ts';
 import { caret } from '../../kit/text/textops.ts';
 import {
@@ -148,16 +147,10 @@ const DIR_NAME: Record<Dir, () => string> = {
 };
 const DIR_ICON: Record<Dir, typeof ArrowRight | null> = { '--': null, '->': ArrowRight, '<-': ArrowLeft, '<->': ArrowLeftRight };
 
-/** A Tiny Little Office link as a ref ("<app>\n<text>"), or null when the words are not one. */
+/** A document's link as a ref ("<app>\n<text>"), or null when the words are not one (the host reads it: kit/core/host.ts). */
 function refOfLink(words: string): string | null {
-  const s = words.trim();
-  if (!/^https?:\/\/\S+#\/v\d+\//.test(s)) return null;
-  const { app, payload } = parseHash(s.slice(s.indexOf('#')));
-  if (!app) return null;
-  // A link locked with a password goes in as itself (kit/share/locked.ts).
-  if (isSealed(payload)) return fenceRef(lockedFence(app, payload) as { lang: string; body: string });
-  const text = decodeDoc(payload);
-  return payload && !text ? null : `${app}\n${text}`;
+  const placed = host.read(words);
+  return placed ? fenceRef(placed) : null;
 }
 
 /** Where the selection was before an edit: rows chosen whole, or the caret in a row's words. What an undo puts back (the entry's mark). */
@@ -860,7 +853,7 @@ export class ToOutlineEditor extends DocElement<OutlineView> {
 
   /** The outline opened as another kind of document, in that app, in a new tab. */
   openAs(h: Handoff) {
-    window.open(location.pathname + routeHash(h.to, encodeDoc(h.convert(write(this.doc)))), '_blank', 'noopener');
+    window.open(host.link(h.to, h.convert(write(this.doc))), '_blank', 'noopener');
   }
   showPage() {
     this.showing = true;
@@ -1082,7 +1075,7 @@ export class ToOutlineEditor extends DocElement<OutlineView> {
     const { app, gist } = docGist(it.doc!);
     const body = it.doc!.slice(it.doc!.indexOf('\n') + 1);
     const locked = app === LOCKED_LANG;
-    const href = placedLink(app, body, encodeDoc, location.pathname);
+    const href = host.link(app, body);
     return html`<div class="ol-doc" tabindex="0" role="group" aria-label=${appOf(app) ? t('common-noun', { noun: appOf(app)!.noun }) : t('common-app-document', { app: appName(app) })} @paste=${(e: ClipboardEvent) => this.onDocPaste(it.at, e)}>
       <span class="ol-doc-kind">${locked ? icon(UI.lock, 16) : appOf(app) ? icon(appOf(app)!.icon, 16) : nothing}<b>${appName(app)}</b></span>
       <span class="ol-doc-gist">${locked ? t('common-with-password') : gist || t('outline-empty')}</span>

@@ -13,8 +13,8 @@ import { chosenLanguage, t } from '../../kit/core/i18n.ts';
 import { MOTION_JS } from '../../kit/draw/motion.ts';
 import { pageScript } from '../../kit/draw/page.ts';
 import { QR_MAX_BYTES, qrSvg } from '../../kit/draw/qr.ts';
-import { routeHash, siteOf } from '../../kit/core/route.ts';
-import { placedLink } from '../../kit/share/locked.ts';
+import { routeHash } from '../../kit/core/route.ts';
+import { host } from '../../kit/core/host.ts';
 import { attr, markNotes, noteNumbers, noteRuns, parse, plainText, runLinks, write, type Doc, type Run } from '../../doc/index.ts';
 import { iconHex, panelOf, settingsOf, slideNotes, slideText, slidesOf, type Format, type Item, type Settings, type Slide } from './model.ts';
 import { themeOf, type DeckTheme } from './theme.ts';
@@ -233,8 +233,7 @@ export function subPage(doc: Doc, s: Slide, upTo?: number, open = false, still =
  */
 function moreLink(doc: Doc, s: Slide): string {
   const b = s.sub >= 0 ? doc.blocks[s.sub] : null;
-  const site = typeof location !== 'undefined' && location.origin !== 'null' ? siteOf(location.href, (id) => !!lookup.appOf(id)) : '';
-  if (b?.k === 'fence' && b.lang && lookup.appOf(b.lang)?.long) return placedLink(b.lang, b.body, encodeDoc, site);
+  if (b?.k === 'fence' && b.lang && lookup.appOf(b.lang)?.long) return host.link(b.lang, b.body);
   return '';
 }
 
@@ -863,12 +862,13 @@ export function sheetsOf(doc: Doc, s: Settings = settingsOf(doc), still = false)
 
 /**
  * The deck the room takes home: its slides as the Display Link, every speaker note cut (the quotes at each slide's
- * end are the speaker's, never the room's), on the site it is shown from (in a browser), else the fragment alone; in the
- * language the deck is shown in, when one was chosen.
+ * end are the speaker's, never the room's), where the host opens it (kit/core/host.ts: on the site it is shown from, else
+ * the fragment alone), or on `site`; in the language the deck is shown in, when one was chosen.
  */
-export function takeHomeLink(doc: Doc, site = typeof location !== 'undefined' ? location.origin + location.pathname : '', lang = chosenLanguage()): string {
+export function takeHomeLink(doc: Doc, site?: string, lang = chosenLanguage()): string {
   const notes = new Set(slidesOf(doc).flatMap((s) => Array.from({ length: s.notes[1] - s.notes[0] }, (_, i) => s.notes[0] + i)));
-  return site + routeHash('deck', encodeDoc(write({ ...doc, blocks: doc.blocks.filter((_, i) => !notes.has(i)) })), '', true, null, lang);
+  const text = write({ ...doc, blocks: doc.blocks.filter((_, i) => !notes.has(i)) });
+  return site === undefined ? host.link('deck', text, { display: true, lang }) : site + routeHash('deck', encodeDoc(text), '', true, null, lang);
 }
 
 /** Whether the deck ends with its code: not a printed thing, not an empty deck, not when the header says "qr: no". */
